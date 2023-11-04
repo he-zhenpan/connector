@@ -42,6 +42,7 @@ import (
 	"github.com/aldelo/connector/service/grpc_recovery"
 	ws "github.com/aldelo/connector/webserver"
 	sns2 "github.com/aws/aws-sdk-go/service/sns"
+	awsxray "github.com/aws/aws-xray-sdk-go/xray"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip"
@@ -326,7 +327,8 @@ func (s *Service) setupServer() (lis net.Listener, ip string, port uint, err err
 
 		// add unary server interceptors
 		if xray.XRayServiceOn() {
-			s.UnaryServerInterceptors = append(s.UnaryServerInterceptors, tracer.TracerUnaryServerInterceptor)
+			//s.UnaryServerInterceptors = append(s.UnaryServerInterceptors, tracer.TracerUnaryServerInterceptor)
+			s.UnaryServerInterceptors = append(s.UnaryServerInterceptors, awsxray.UnaryServerInterceptor())
 		}
 
 		s.UnaryServerInterceptors = append(s.UnaryServerInterceptors, grpc_recovery.UnaryServerInterceptor())

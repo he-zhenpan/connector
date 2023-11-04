@@ -37,6 +37,7 @@ import (
 	"github.com/aldelo/connector/adapters/registry/sdoperationstatus"
 	res "github.com/aldelo/connector/adapters/resolver"
 	ws "github.com/aldelo/connector/webserver"
+	awsxray "github.com/aws/aws-xray-sdk-go/xray"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/connectivity"
@@ -323,7 +324,8 @@ func (c *Client) buildDialOptions(loadBalancerPolicy string) (opts []grpc.DialOp
 
 	if xray.XRayServiceOn() {
 		c._z.Printf("Setup Unary XRay Tracer Interceptor")
-		c.UnaryClientInterceptors = append(c.UnaryClientInterceptors, c.unaryXRayTracerHandler)
+		//c.UnaryClientInterceptors = append(c.UnaryClientInterceptors, c.unaryXRayTracerHandler)
+		c.UnaryClientInterceptors = append(c.UnaryClientInterceptors, c.unaryXRayTracerHandler2())
 	}
 
 	count := len(c.UnaryClientInterceptors)
@@ -1570,6 +1572,16 @@ func (c *Client) streamCircuitBreakerHandler(ctx context.Context, desc *grpc.Str
 		}
 	} else {
 		return streamer(ctx, desc, cc, method, opts...)
+	}
+}
+
+func (c *Client) unaryXRayTracerHandler2() grpc.UnaryClientInterceptor {
+	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		//log.Println("unaryXRayTracerHandler2: ", method)
+		if strings.Contains(method, "grpc.health") {
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}
+		return awsxray.UnaryClientInterceptor()(ctx, method, req, reply, cc, invoker, opts...)
 	}
 }
 
