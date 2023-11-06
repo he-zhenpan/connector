@@ -20,9 +20,22 @@ import (
 	"context"
 	util "github.com/aldelo/common"
 	"github.com/aldelo/common/wrapper/xray"
+	awsxray "github.com/aws/aws-xray-sdk-go/xray"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
+
+func TracerUnaryServerInterceptorV2(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+	if xray.XRayServiceOn() {
+		// bypass xray tracer if no segment exists
+		if awsxray.GetSegment(ctx) == nil {
+			return handler(ctx, req)
+		}
+		return awsxray.UnaryServerInterceptor()(ctx, req, info, handler)
+	} else {
+		return handler(ctx, req)
+	}
+}
 
 // TracerUnaryServerInterceptor will perform xray tracing for each unary RPC call
 //

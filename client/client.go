@@ -325,7 +325,7 @@ func (c *Client) buildDialOptions(loadBalancerPolicy string) (opts []grpc.DialOp
 	if xray.XRayServiceOn() {
 		c._z.Printf("Setup Unary XRay Tracer Interceptor")
 		//c.UnaryClientInterceptors = append(c.UnaryClientInterceptors, c.unaryXRayTracerHandler)
-		c.UnaryClientInterceptors = append(c.UnaryClientInterceptors, c.unaryXRayTracerHandler2())
+		c.UnaryClientInterceptors = append(c.UnaryClientInterceptors, c.unaryXRayTracerHandlerV2)
 	}
 
 	count := len(c.UnaryClientInterceptors)
@@ -1575,13 +1575,19 @@ func (c *Client) streamCircuitBreakerHandler(ctx context.Context, desc *grpc.Str
 	}
 }
 
-func (c *Client) unaryXRayTracerHandler2() grpc.UnaryClientInterceptor {
-	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		//log.Println("unaryXRayTracerHandler2: ", method)
+func (c *Client) unaryXRayTracerHandlerV2(ctx context.Context, method string, req interface{}, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) (err error) {
+	if xray.XRayServiceOn() {
+		// bypass health check
 		if strings.Contains(method, "grpc.health") {
 			return invoker(ctx, method, req, reply, cc, opts...)
 		}
+		// bypass xray tracer if no segment exists
+		if awsxray.GetSegment(ctx) == nil {
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}
 		return awsxray.UnaryClientInterceptor()(ctx, method, req, reply, cc, invoker, opts...)
+	} else {
+		return invoker(ctx, method, req, reply, cc, opts...)
 	}
 }
 
