@@ -1577,16 +1577,20 @@ func (c *Client) streamCircuitBreakerHandler(ctx context.Context, desc *grpc.Str
 
 func (c *Client) unaryXRayTracerHandlerV2(ctx context.Context, method string, req interface{}, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) (err error) {
 	if xray.XRayServiceOn() {
+		log.Println("!!! xray is on")
 		// bypass health check
 		if strings.Contains(method, "grpc.health") {
 			return invoker(ctx, method, req, reply, cc, opts...)
 		}
 		// bypass xray tracer if no segment exists
 		if awsxray.GetSegment(ctx) == nil {
+			log.Println("!!! segment context is nil")
 			return invoker(ctx, method, req, reply, cc, opts...)
 		}
+		log.Println("!!! all ready, trace it. ")
 		return awsxray.UnaryClientInterceptor()(ctx, method, req, reply, cc, invoker, opts...)
 	} else {
+		log.Println("!!! xray is off")
 		return invoker(ctx, method, req, reply, cc, opts...)
 	}
 }
