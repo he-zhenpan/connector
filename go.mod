@@ -20,7 +20,7 @@ require (
 	github.com/antlr/antlr4 v0.0.0-20200820155224-be881fa6b91d // indirect
 	github.com/appleboy/gin-jwt/v2 v2.9.1 // indirect
 	github.com/aws/aws-dax-go v1.2.12 // indirect
-	github.com/aws/aws-xray-sdk-go v1.8.1 // indirect
+	github.com/aws/aws-xray-sdk-go v1.8.2 // indirect
 	github.com/boj/redistore v0.0.0-20180917114910-cd5dcc76aeff // indirect
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/cactus/go-statsd-client/statsd v0.0.0-20200728222731-a2baea3bbfc6 // indirect

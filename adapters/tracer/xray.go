@@ -28,13 +28,7 @@ import (
 
 func TracerUnaryServerInterceptorV2(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	if xray.XRayServiceOn() {
-		log.Println("!!! xray service on !!!")
-		// bypass xray tracer if no segment exists
-		if awsxray.GetSegment(ctx) == nil {
-			log.Println("!!! xray segment is nil !!!")
-			return handler(ctx, req)
-		}
-		log.Println("!!! all ready tracing !!!")
+		log.Println("!!! xray service on and tracing !!!")
 		return awsxray.UnaryServerInterceptor()(ctx, req, info, handler)
 	} else {
 		log.Println("!!! xray service off !!!")
