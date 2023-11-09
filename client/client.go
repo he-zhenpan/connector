@@ -324,7 +324,7 @@ func (c *Client) buildDialOptions(loadBalancerPolicy string) (opts []grpc.DialOp
 		c.UnaryClientInterceptors = append(c.UnaryClientInterceptors, c.unaryCircuitBreakerHandler)
 	}
 
-	if xray.XRayServiceOn() {
+	if tracer.IsXrayServiceOn() {
 		c._z.Printf("Setup Unary XRay Tracer Interceptor")
 		//c.UnaryClientInterceptors = append(c.UnaryClientInterceptors, c.unaryXRayTracerHandler)
 		c.UnaryClientInterceptors = append(c.UnaryClientInterceptors, tracer.TracerUnaryClientInterceptorV1(c._config.Target.AppName+"-Client"))

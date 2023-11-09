@@ -64,9 +64,13 @@ func InitXray(daemonAddr string, serviceVersion string) error {
 	}
 }
 
+func IsXrayServiceOn() bool {
+	return _xrayServiceOn
+}
+
 func TracerUnaryClientInterceptorV1(serviceName string) grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		if _xrayServiceOn {
+		if IsXrayServiceOn() {
 			log.Println("!!! xray is on")
 			// bypass health check
 			if strings.HasPrefix(method, "/grpc.health") {
@@ -88,7 +92,7 @@ func TracerUnaryClientInterceptorV1(serviceName string) grpc.UnaryClientIntercep
 
 func TracerUnaryServerInterceptorV3(serviceName string) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-		if _xrayServiceOn {
+		if IsXrayServiceOn() {
 			log.Println("!!! xray service on and tracing !!! ", info.FullMethod)
 			if info != nil && strings.HasPrefix(info.FullMethod, "/grpc.health") {
 				return handler(ctx, req)
