@@ -20,19 +20,55 @@ import (
 	"context"
 	util "github.com/aldelo/common"
 	"github.com/aldelo/common/wrapper/xray"
+	"github.com/aws/aws-xray-sdk-go/awsplugins/ecs"
 	awsxray "github.com/aws/aws-xray-sdk-go/xray"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"log"
+	"os"
 	"strings"
 )
 
+// indicates if xray service tracing is on or off
+var _xrayServiceOn bool
+
+// Init will configure xray daemon address and service version
+func InitXray(daemonAddr string, serviceVersion string) error {
+
+	// conditionally load plugin
+	if os.Getenv("ENVIRONMENT") == "ECS" {
+		ecs.Init()
+	}
+
+	if util.LenTrim(daemonAddr) == 0 {
+		// if daemon address is not set,
+		// use default value
+		daemonAddr = "127.0.0.1:2000"
+	}
+
+	if util.LenTrim(serviceVersion) == 0 {
+		// if service version is not set,
+		// use default value
+		serviceVersion = "1.2.0"
+	}
+
+	if err := awsxray.Configure(awsxray.Config{
+		DaemonAddr:     daemonAddr,
+		ServiceVersion: serviceVersion,
+	}); err != nil {
+		return err
+	} else {
+		_xrayServiceOn = true
+		return nil
+	}
+}
+
 func TracerUnaryClientInterceptorV1(serviceName string) grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		if xray.XRayServiceOn() {
+		if _xrayServiceOn {
 			log.Println("!!! xray is on")
 			// bypass health check
-			if strings.Contains(method, "grpc.health") {
+			if strings.Contains(method, "/grpc.health") {
 				return invoker(ctx, method, req, reply, cc, opts...)
 			}
 			// bypass xray tracer if no segment exists
@@ -51,24 +87,16 @@ func TracerUnaryClientInterceptorV1(serviceName string) grpc.UnaryClientIntercep
 
 func TracerUnaryServerInterceptorV3(serviceName string) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-		if xray.XRayServiceOn() {
-			log.Println("!!! xray service on and tracing !!!")
-			log.Println("full method is: ", info.FullMethod)
+		if _xrayServiceOn {
+			log.Println("!!! xray service on and tracing !!! ", info.FullMethod)
+			if info != nil && strings.HasPrefix(info.FullMethod, "/grpc.health") {
+				return handler(ctx, req)
+			}
 			return awsxray.UnaryServerInterceptor(awsxray.WithSegmentNamer(awsxray.NewFixedSegmentNamer(serviceName)))(ctx, req, info, handler)
 		} else {
 			log.Println("!!! xray service off !!!")
 			return handler(ctx, req)
 		}
-	}
-}
-
-func TracerUnaryServerInterceptorV2(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-	if xray.XRayServiceOn() {
-		log.Println("!!! xray service on and tracing !!!")
-		return awsxray.UnaryServerInterceptor()(ctx, req, info, handler)
-	} else {
-		log.Println("!!! xray service off !!!")
-		return handler(ctx, req)
 	}
 }
 

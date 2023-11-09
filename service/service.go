@@ -216,8 +216,9 @@ func (s *Service) setupServer() (lis net.Listener, ip string, port uint, err err
 	} else {
 		// enable xray if configured
 		if s._config.Service.TracerUseXRay {
-			_ = xray.Init("127.0.0.1:2000", "1.2.0")
-			xray.SetXRayServiceOn()
+			//_ = xray.Init("127.0.0.1:2000", "1.2.0")
+			//xray.SetXRayServiceOn()
+			_ = tracer.InitXray("127.0.0.1:2000", "1.2.0")
 		}
 
 		// if rest target ca cert files defined, load self-signed ca certs so that this service may use those host resources
@@ -327,7 +328,7 @@ func (s *Service) setupServer() (lis net.Listener, ip string, port uint, err err
 		// add unary server interceptors
 		if xray.XRayServiceOn() {
 			//s.UnaryServerInterceptors = append(s.UnaryServerInterceptors, tracer.TracerUnaryServerInterceptor)
-			s.UnaryServerInterceptors = append(s.UnaryServerInterceptors, tracer.TracerUnaryServerInterceptorV3(s._config.Service.Name+"Server"))
+			s.UnaryServerInterceptors = append(s.UnaryServerInterceptors, tracer.TracerUnaryServerInterceptorV3(s._config.Service.Name+"-Server"))
 		}
 
 		s.UnaryServerInterceptors = append(s.UnaryServerInterceptors, grpc_recovery.UnaryServerInterceptor())
