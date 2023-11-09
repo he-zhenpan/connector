@@ -36,6 +36,7 @@ import (
 	"github.com/aldelo/connector/adapters/registry"
 	"github.com/aldelo/connector/adapters/registry/sdoperationstatus"
 	res "github.com/aldelo/connector/adapters/resolver"
+	"github.com/aldelo/connector/adapters/tracer"
 	ws "github.com/aldelo/connector/webserver"
 	awsxray "github.com/aws/aws-xray-sdk-go/xray"
 	"google.golang.org/grpc"
@@ -324,8 +325,8 @@ func (c *Client) buildDialOptions(loadBalancerPolicy string) (opts []grpc.DialOp
 
 	if xray.XRayServiceOn() {
 		c._z.Printf("Setup Unary XRay Tracer Interceptor")
-		c.UnaryClientInterceptors = append(c.UnaryClientInterceptors, c.unaryXRayTracerHandler)
-		//c.UnaryClientInterceptors = append(c.UnaryClientInterceptors, c.unaryXRayTracerHandlerV2)
+		//c.UnaryClientInterceptors = append(c.UnaryClientInterceptors, c.unaryXRayTracerHandler)
+		c.UnaryClientInterceptors = append(c.UnaryClientInterceptors, tracer.TracerUnaryClientInterceptorV1(c._config.Target.AppName))
 	}
 
 	count := len(c.UnaryClientInterceptors)
@@ -597,17 +598,17 @@ func (c *Client) Dial(ctx context.Context) error {
 		ctxWithTimeout, cancel := context.WithTimeout(ctx, time.Duration(dialSec)*time.Second)
 		defer cancel()
 
-		seg := xray.NewSegmentNullable("GrpcClient-Dial")
-		if seg != nil {
-			defer seg.Close()
-		}
+		//seg := xray.NewSegmentNullable("GrpcClient-Dial")
+		//if seg != nil {
+		//	defer seg.Close()
+		//}
 
 		if c._conn, err = grpc.DialContext(ctxWithTimeout, target, opts...); err != nil {
 			c._z.Errorf("Dial Failed: (If TLS/mTLS, Check Certificate SAN) %s", err.Error())
 			e := fmt.Errorf("gRPC Client Dial Service Endpoint %s Failed: (If TLS/mTLS, Check Certificate SAN) %s", target, err.Error())
-			if seg != nil {
-				_ = seg.Seg.AddError(e)
-			}
+			//if seg != nil {
+			//	_ = seg.Seg.AddError(e)
+			//}
 			return e
 		} else {
 			// dial grpc service endpoint success
@@ -625,9 +626,9 @@ func (c *Client) Dial(ctx context.Context) error {
 				if e := c.waitForEndpointReady(time.Duration(dialSec) * time.Second); e != nil {
 					// health probe failed
 					_ = c._conn.Close()
-					if seg != nil {
-						_ = seg.Seg.AddError(fmt.Errorf("gRPC Service Server Not Ready: " + e.Error()))
-					}
+					//if seg != nil {
+					//	_ = seg.Seg.AddError(fmt.Errorf("gRPC Service Server Not Ready: " + e.Error()))
+					//}
 					return fmt.Errorf("gRPC Service Server Not Ready: " + e.Error())
 				}
 			}
@@ -660,9 +661,9 @@ func (c *Client) Dial(ctx context.Context) error {
 					if e := c.waitForWebServerReady(time.Duration(c._config.Target.SdTimeout) * time.Second); e != nil {
 						// web server error
 						c._z.Errorf("!!! Http Web Server %s Failed: %s !!!", c.WebServerConfig.AppName, e)
-						if seg != nil {
-							_ = seg.Seg.AddError(fmt.Errorf("Http Web Server %s Failed: %s", c.WebServerConfig.AppName, e))
-						}
+						//if seg != nil {
+						//	_ = seg.Seg.AddError(fmt.Errorf("Http Web Server %s Failed: %s", c.WebServerConfig.AppName, e))
+						//}
 					} else {
 						// web server ok
 						c._z.Printf("... Http Web Server Started: %s", c.WebServerConfig.WebServerLocalAddress)

@@ -24,7 +24,43 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"log"
+	"strings"
 )
+
+func TracerUnaryClientInterceptorV1(serviceName string) grpc.UnaryClientInterceptor {
+	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		if xray.XRayServiceOn() {
+			log.Println("!!! xray is on")
+			// bypass health check
+			if strings.Contains(method, "grpc.health") {
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+			// bypass xray tracer if no segment exists
+			if awsxray.GetSegment(ctx) == nil {
+				log.Println("!!! segment context is nil")
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+			log.Println("!!! all ready, trace it. ")
+			return awsxray.UnaryClientInterceptor(awsxray.WithSegmentNamer(awsxray.NewFixedSegmentNamer(serviceName)))(ctx, method, req, reply, cc, invoker, opts...)
+		} else {
+			log.Println("!!! xray is off")
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}
+	}
+}
+
+func TracerUnaryServerInterceptorV3(serviceName string) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+		if xray.XRayServiceOn() {
+			log.Println("!!! xray service on and tracing !!!")
+			log.Println("full method is: ", info.FullMethod)
+			return awsxray.UnaryServerInterceptor(awsxray.WithSegmentNamer(awsxray.NewFixedSegmentNamer(serviceName)))(ctx, req, info, handler)
+		} else {
+			log.Println("!!! xray service off !!!")
+			return handler(ctx, req)
+		}
+	}
+}
 
 func TracerUnaryServerInterceptorV2(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	if xray.XRayServiceOn() {

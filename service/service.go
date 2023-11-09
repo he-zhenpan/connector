@@ -326,8 +326,8 @@ func (s *Service) setupServer() (lis net.Listener, ip string, port uint, err err
 
 		// add unary server interceptors
 		if xray.XRayServiceOn() {
-			s.UnaryServerInterceptors = append(s.UnaryServerInterceptors, tracer.TracerUnaryServerInterceptor)
-			//s.UnaryServerInterceptors = append(s.UnaryServerInterceptors, tracer.TracerUnaryServerInterceptorV2)
+			//s.UnaryServerInterceptors = append(s.UnaryServerInterceptors, tracer.TracerUnaryServerInterceptor)
+			s.UnaryServerInterceptors = append(s.UnaryServerInterceptors, tracer.TracerUnaryServerInterceptorV3(s._config.Service.Name))
 		}
 
 		s.UnaryServerInterceptors = append(s.UnaryServerInterceptors, grpc_recovery.UnaryServerInterceptor())
@@ -408,12 +408,12 @@ func (s *Service) setupServer() (lis net.Listener, ip string, port uint, err err
 		if s._config.Instance.FavorPublicIP && util.LenTrim(s._config.Instance.PublicIPGateway) > 0 && util.LenTrim(s._config.Instance.PublicIPGatewayKey) > 0 {
 			validationToken := crypto.Sha256(util.FormatDate(time.Now().UTC()), s._config.Instance.PublicIPGatewayKey)
 
-			publicIPSeg := xray.NewSegmentNullable("GrpcService-SetupServer")
-			if publicIPSeg != nil {
-				_ = publicIPSeg.Seg.AddMetadata("Public-IP-Gateway", s._config.Instance.PublicIPGateway)
-				_ = publicIPSeg.Seg.AddMetadata("Hash-Date", util.FormatDate(time.Now().UTC()))
-				_ = publicIPSeg.Seg.AddMetadata("Hash-Validation-Token", validationToken)
-			}
+			//publicIPSeg := xray.NewSegmentNullable("GrpcService-SetupServer")
+			//if publicIPSeg != nil {
+			//	_ = publicIPSeg.Seg.AddMetadata("Public-IP-Gateway", s._config.Instance.PublicIPGateway)
+			//	_ = publicIPSeg.Seg.AddMetadata("Hash-Date", util.FormatDate(time.Now().UTC()))
+			//	_ = publicIPSeg.Seg.AddMetadata("Hash-Validation-Token", validationToken)
+			//}
 
 			if status, body, err := rest.GET(s._config.Instance.PublicIPGateway, []*rest.HeaderKeyValue{
 				{
@@ -425,10 +425,10 @@ func (s *Service) setupServer() (lis net.Listener, ip string, port uint, err err
 				buf := "!!! Get Instance Public IP via '" + s._config.Instance.PublicIPGateway + "' with Header 'x-nts-gateway-token' Failed: " + err.Error() + ", Service Launch Stopped !!!"
 				log.Println(buf)
 
-				if publicIPSeg != nil {
-					_ = publicIPSeg.Seg.AddError(fmt.Errorf(buf))
-					publicIPSeg.Close()
-				}
+				//if publicIPSeg != nil {
+				//	_ = publicIPSeg.Seg.AddError(fmt.Errorf(buf))
+				//	publicIPSeg.Close()
+				//}
 
 				return nil, "", 0, fmt.Errorf(buf)
 			} else if status != 200 {
@@ -436,21 +436,21 @@ func (s *Service) setupServer() (lis net.Listener, ip string, port uint, err err
 				buf := "!!! Get Instance Public IP via '" + s._config.Instance.PublicIPGateway + "' with Header 'x-nts-gateway-token' Not Successful: Status Code " + util.Itoa(status) + ", Service Launch Stopped !!!"
 				log.Println(buf)
 
-				if publicIPSeg != nil {
-					_ = publicIPSeg.Seg.AddError(fmt.Errorf(buf))
-					publicIPSeg.Close()
-				}
+				//if publicIPSeg != nil {
+				//	_ = publicIPSeg.Seg.AddError(fmt.Errorf(buf))
+				//	publicIPSeg.Close()
+				//}
 
 				return nil, "", 0, fmt.Errorf(buf)
 			} else {
 				// status 200, use public ip instead of local ip
 				if util.IsNumericIntOnly(strings.Replace(body, ".", "", -1)) {
 					// is public ip most likely
-					if publicIPSeg != nil {
-						_ = publicIPSeg.Seg.AddMetadata("Result-Private-IP", ip)
-						_ = publicIPSeg.Seg.AddMetadata("Result-Public-IP", body)
-						publicIPSeg.Close()
-					}
+					//if publicIPSeg != nil {
+					//	_ = publicIPSeg.Seg.AddMetadata("Result-Private-IP", ip)
+					//	_ = publicIPSeg.Seg.AddMetadata("Result-Public-IP", body)
+					//	publicIPSeg.Close()
+					//}
 
 					log.Println("=== Instance Using Public IP '" + body + "' From Discovery Gateway Per Service Config, Original LocalIP was '" + ip + "' ===")
 					ip = body
@@ -458,10 +458,10 @@ func (s *Service) setupServer() (lis net.Listener, ip string, port uint, err err
 					buf := "!!! Get Instance Public IP via '" + s._config.Instance.PublicIPGateway + "' with Header 'x-nts-gateway-token' Not Successful: Status Code 200, But Content Not IP: " + body + ", Service Launch Stopped !!!"
 					log.Println(buf)
 
-					if publicIPSeg != nil {
-						_ = publicIPSeg.Seg.AddError(fmt.Errorf(buf))
-						publicIPSeg.Close()
-					}
+					//if publicIPSeg != nil {
+					//	_ = publicIPSeg.Seg.AddError(fmt.Errorf(buf))
+					//	publicIPSeg.Close()
+					//}
 
 					return nil, "", 0, fmt.Errorf(buf)
 				}
@@ -612,15 +612,15 @@ func (s *Service) CurrentlyServing() bool {
 
 // startServer will start and serve grpc services, it will run in goroutine until terminated
 func (s *Service) startServer(lis net.Listener, quit chan bool) (err error) {
-	seg := xray.NewSegmentNullable("GrpcService-StartServer")
-	if seg != nil {
-		defer seg.Close()
-		defer func() {
-			if err != nil {
-				_ = seg.Seg.AddError(err)
-			}
-		}()
-	}
+	//seg := xray.NewSegmentNullable("GrpcService-StartServer")
+	//if seg != nil {
+	//	defer seg.Close()
+	//	defer func() {
+	//		if err != nil {
+	//			_ = seg.Seg.AddError(err)
+	//		}
+	//	}()
+	//}
 
 	if s._grpcServer == nil {
 		err = fmt.Errorf("gRPC Server Not Setup")
@@ -978,15 +978,15 @@ func (s *Service) awaitOsSigExit() {
 
 // deleteServiceHealthReportFromDataStore will remove the health report service record from data store based on instanceId
 func (s *Service) deleteServiceHealthReportFromDataStore(instanceId string) (err error) {
-	seg := xray.NewSegmentNullable("GrpcService-DeleteServiceHealthReportFromDataStore")
-	if seg != nil {
-		defer seg.Close()
-		defer func() {
-			if err != nil {
-				_ = seg.Seg.AddError(err)
-			}
-		}()
-	}
+	//seg := xray.NewSegmentNullable("GrpcService-DeleteServiceHealthReportFromDataStore")
+	//if seg != nil {
+	//	defer seg.Close()
+	//	defer func() {
+	//		if err != nil {
+	//			_ = seg.Seg.AddError(err)
+	//		}
+	//	}()
+	//}
 
 	if util.LenTrim(instanceId) == 0 {
 		err = fmt.Errorf("Delete Health Report Service Record Requires InstanceID")
@@ -1013,13 +1013,13 @@ func (s *Service) deleteServiceHealthReportFromDataStore(instanceId string) (err
 		return err
 	}
 
-	var subSeg *xray.XSegment
+	//var subSeg *xray.XSegment
 
-	if seg != nil {
-		subSeg = seg.NewSubSegment("REST DEL: " + s._config.Instance.HealthReportServiceUrl)
-		_ = subSeg.Seg.AddMetadata("x-nts-gateway-hash-name", s._config.Instance.HashKeyName)
-		_ = subSeg.Seg.AddMetadata("x-nts-gateway-hash-signature", crypto.Sha256(instanceId+util.FormatDate(time.Now().UTC()), s._config.Instance.HashKeySecret))
-	}
+	//if seg != nil {
+	//	subSeg = seg.NewSubSegment("REST DEL: " + s._config.Instance.HealthReportServiceUrl)
+	//	_ = subSeg.Seg.AddMetadata("x-nts-gateway-hash-name", s._config.Instance.HashKeyName)
+	//	_ = subSeg.Seg.AddMetadata("x-nts-gateway-hash-signature", crypto.Sha256(instanceId+util.FormatDate(time.Now().UTC()), s._config.Instance.HashKeySecret))
+	//}
 
 	statusCode, _, e := rest.DELETE(s._config.Instance.HealthReportServiceUrl+"/"+instanceId, []*rest.HeaderKeyValue{
 		{
@@ -1036,9 +1036,9 @@ func (s *Service) deleteServiceHealthReportFromDataStore(instanceId string) (err
 		},
 	})
 
-	if subSeg != nil {
-		subSeg.Close()
-	}
+	//if subSeg != nil {
+	//	subSeg.Close()
+	//}
 
 	if e != nil {
 		err = fmt.Errorf("Delete Health Report Service Record Failed: %s", e.Error())
@@ -1058,15 +1058,15 @@ func (s *Service) deleteServiceHealthReportFromDataStore(instanceId string) (err
 func (s *Service) setServiceHealthReportUpdateToDataStore() bool {
 	var err error
 
-	seg := xray.NewSegmentNullable("GrpcService-setServiceHealthReportUpdateToDataStore")
-	if seg != nil {
-		defer seg.Close()
-		defer func() {
-			if err != nil {
-				_ = seg.Seg.AddError(err)
-			}
-		}()
-	}
+	//seg := xray.NewSegmentNullable("GrpcService-setServiceHealthReportUpdateToDataStore")
+	//if seg != nil {
+	//	defer seg.Close()
+	//	defer func() {
+	//		if err != nil {
+	//			_ = seg.Seg.AddError(err)
+	//		}
+	//	}()
+	//}
 
 	if s._config == nil {
 		err = fmt.Errorf("Set Service Health Report Update To Data Store Stopped: %s", "Service Config Nil")
@@ -1118,9 +1118,9 @@ func (s *Service) setServiceHealthReportUpdateToDataStore() bool {
 	if util.LenTrim(s._config.Service.Id) == 0 {
 		msg := "Set Service Health Report Update To Data Store Skipped: " + "ServiceID Not Defined in Config"
 
-		if seg != nil {
-			_ = seg.Seg.AddMetadata("Skipped-Reason", msg)
-		}
+		//if seg != nil {
+		//	_ = seg.Seg.AddMetadata("Skipped-Reason", msg)
+		//}
 
 		log.Println(msg)
 		return true
@@ -1129,9 +1129,9 @@ func (s *Service) setServiceHealthReportUpdateToDataStore() bool {
 	if util.LenTrim(s._config.Instance.Id) == 0 {
 		msg := "Set Service Health Report Update To Data Store Skipped: " + "InstanceID Not Defined in Config"
 
-		if seg != nil {
-			_ = seg.Seg.AddMetadata("Skipped-Reason", msg)
-		}
+		//if seg != nil {
+		//	_ = seg.Seg.AddMetadata("Skipped-Reason", msg)
+		//}
 
 		log.Println(msg)
 		return true
@@ -1140,9 +1140,9 @@ func (s *Service) setServiceHealthReportUpdateToDataStore() bool {
 	if util.LenTrim(s._localAddress) == 0 {
 		msg := "Set Service Health Report Update To Data Store Skipped: " + "Service Host Info Not Ready"
 
-		if seg != nil {
-			_ = seg.Seg.AddMetadata("Skipped-Reason", msg)
-		}
+		//if seg != nil {
+		//	_ = seg.Seg.AddMetadata("Skipped-Reason", msg)
+		//}
 
 		log.Println(msg)
 		return true
@@ -1172,12 +1172,12 @@ func (s *Service) setServiceHealthReportUpdateToDataStore() bool {
 		return true
 	}
 
-	var subSeg *xray.XSegment
+	//var subSeg *xray.XSegment
 
-	if seg != nil {
-		subSeg = seg.NewSubSegment("REST POST: " + s._config.Instance.HealthReportServiceUrl)
-		_ = subSeg.Seg.AddMetadata("Post-Data", jsonData)
-	}
+	//if seg != nil {
+	//	subSeg = seg.NewSubSegment("REST POST: " + s._config.Instance.HealthReportServiceUrl)
+	//	_ = subSeg.Seg.AddMetadata("Post-Data", jsonData)
+	//}
 
 	// call sns gateway /healthreport to notify service live status
 	if statusCode, RespBody, e := rest.POST(s._config.Instance.HealthReportServiceUrl, []*rest.HeaderKeyValue{
@@ -1200,9 +1200,9 @@ func (s *Service) setServiceHealthReportUpdateToDataStore() bool {
 		log.Println("Set Service Health Report Update To Data Store OK")
 	}
 
-	if subSeg != nil {
-		subSeg.Close()
-	}
+	//if subSeg != nil {
+	//	subSeg.Close()
+	//}
 
 	return true
 }
