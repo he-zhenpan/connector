@@ -56,6 +56,7 @@ func InitXray(daemonAddr string, serviceVersion string) error {
 		DaemonAddr:     daemonAddr,
 		ServiceVersion: serviceVersion,
 	}); err != nil {
+		log.Println("Error configuring xray: ", err.Error())
 		return err
 	} else {
 		_xrayServiceOn = true
@@ -68,7 +69,7 @@ func TracerUnaryClientInterceptorV1(serviceName string) grpc.UnaryClientIntercep
 		if _xrayServiceOn {
 			log.Println("!!! xray is on")
 			// bypass health check
-			if strings.Contains(method, "/grpc.health") {
+			if strings.HasPrefix(method, "/grpc.health") {
 				return invoker(ctx, method, req, reply, cc, opts...)
 			}
 			// bypass xray tracer if no segment exists
