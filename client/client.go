@@ -235,9 +235,8 @@ func (c *Client) buildDialOptions(loadBalancerPolicy string) (opts []grpc.DialOp
 	// setup xray is configured via yaml
 	//
 	if c._config.Target.TraceUseXRay {
-		//_ = xray.Init("127.0.0.1:2000", "1.2.0")
-		//xray.SetXRayServiceOn()
-		_ = tracer.InitXray("127.0.0.1:2000", "1.2.0")
+		_ = xray.Init("127.0.0.1:2000", "1.2.0")
+		xray.SetXRayServiceOn()
 	}
 
 	/*
@@ -324,10 +323,10 @@ func (c *Client) buildDialOptions(loadBalancerPolicy string) (opts []grpc.DialOp
 		c.UnaryClientInterceptors = append(c.UnaryClientInterceptors, c.unaryCircuitBreakerHandler)
 	}
 
-	if tracer.IsXrayServiceOn() {
+	if xray.XRayServiceOn() {
 		c._z.Printf("Setup Unary XRay Tracer Interceptor")
 		//c.UnaryClientInterceptors = append(c.UnaryClientInterceptors, c.unaryXRayTracerHandler)
-		c.UnaryClientInterceptors = append(c.UnaryClientInterceptors, tracer.TracerUnaryClientInterceptorV1(c._config.Target.AppName+"-Client"))
+		c.UnaryClientInterceptors = append(c.UnaryClientInterceptors, tracer.TracerUnaryClientInterceptor(c._config.Target.AppName+"-Client"))
 	}
 
 	count := len(c.UnaryClientInterceptors)

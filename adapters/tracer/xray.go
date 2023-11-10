@@ -20,57 +20,16 @@ import (
 	"context"
 	util "github.com/aldelo/common"
 	"github.com/aldelo/common/wrapper/xray"
-	"github.com/aws/aws-xray-sdk-go/awsplugins/ecs"
 	awsxray "github.com/aws/aws-xray-sdk-go/xray"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"log"
-	"os"
 	"strings"
 )
 
-// indicates if xray service tracing is on or off
-var _xrayServiceOn bool
-
-// Init will configure xray daemon address and service version
-func InitXray(daemonAddr string, serviceVersion string) error {
-
-	// conditionally load plugin
-	if os.Getenv("ENVIRONMENT") == "ECS" {
-		ecs.Init()
-	}
-
-	if util.LenTrim(daemonAddr) == 0 {
-		// if daemon address is not set,
-		// use default value
-		daemonAddr = "127.0.0.1:2000"
-	}
-
-	if util.LenTrim(serviceVersion) == 0 {
-		// if service version is not set,
-		// use default value
-		serviceVersion = "1.2.0"
-	}
-
-	if err := awsxray.Configure(awsxray.Config{
-		DaemonAddr:     daemonAddr,
-		ServiceVersion: serviceVersion,
-	}); err != nil {
-		log.Println("Error configuring xray: ", err.Error())
-		return err
-	} else {
-		_xrayServiceOn = true
-		return nil
-	}
-}
-
-func IsXrayServiceOn() bool {
-	return _xrayServiceOn
-}
-
-func TracerUnaryClientInterceptorV1(serviceName string) grpc.UnaryClientInterceptor {
+func TracerUnaryClientInterceptor(serviceName string) grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		if IsXrayServiceOn() {
+		if xray.XRayServiceOn() {
 			log.Println("!!! xray is on")
 			// bypass health check
 			if strings.HasPrefix(method, "/grpc.health") {
@@ -90,9 +49,9 @@ func TracerUnaryClientInterceptorV1(serviceName string) grpc.UnaryClientIntercep
 	}
 }
 
-func TracerUnaryServerInterceptorV3(serviceName string) grpc.UnaryServerInterceptor {
+func TracerUnaryServerInterceptor(serviceName string) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-		if IsXrayServiceOn() {
+		if xray.XRayServiceOn() {
 			log.Println("!!! xray service on and tracing !!! ", info.FullMethod)
 			if info != nil && strings.HasPrefix(info.FullMethod, "/grpc.health") {
 				return handler(ctx, req)
@@ -117,57 +76,57 @@ func TracerUnaryServerInterceptorV3(serviceName string) grpc.UnaryServerIntercep
 //	ctx := context.Background()
 //	md := metadata.Pairs("x-amzn-seg-id", "abc", "x-amzn-tr-id", "def")
 //	ctx = metadata.NewOutgoingContext(ctx, md)
-func TracerUnaryServerInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-	if xray.XRayServiceOn() {
-		parentSegID := ""
-		parentTraceID := ""
-
-		var md metadata.MD
-		var ok bool
-
-		if md, ok = metadata.FromIncomingContext(ctx); ok {
-			if v, ok2 := md["x-amzn-seg-id"]; ok2 && len(v) > 0 {
-				parentSegID = v[0]
-			}
-
-			if v, ok2 := md["x-amzn-tr-id"]; ok2 && len(v) > 0 {
-				parentTraceID = v[0]
-			}
-		}
-
-		var seg *xray.XSegment
-
-		if util.LenTrim(parentSegID) > 0 && util.LenTrim(parentTraceID) > 0 {
-			seg = xray.NewSegment("GrpcService-UnaryRPC-"+info.FullMethod, &xray.XRayParentSegment{
-				SegmentID: parentSegID,
-				TraceID:   parentTraceID,
-			})
-		} else {
-			seg = xray.NewSegment("GrpcService-UnaryRPC-" + info.FullMethod)
-		}
-		defer seg.Close()
-		defer func() {
-			if err != nil {
-				_ = seg.Seg.AddError(err)
-			}
-		}()
-
-		if md == nil {
-			md = make(metadata.MD)
-		}
-
-		md.Set("x-amzn-seg-id", seg.Seg.ID)
-		md.Set("x-amzn-tr-id", seg.Seg.TraceID)
-
-		// header is sent by itself
-		_ = grpc.SendHeader(ctx, md)
-
-		resp, err = handler(ctx, req)
-		return resp, err
-	} else {
-		return handler(ctx, req)
-	}
-}
+//func TracerUnaryServerInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+//	if xray.XRayServiceOn() {
+//		parentSegID := ""
+//		parentTraceID := ""
+//
+//		var md metadata.MD
+//		var ok bool
+//
+//		if md, ok = metadata.FromIncomingContext(ctx); ok {
+//			if v, ok2 := md["x-amzn-seg-id"]; ok2 && len(v) > 0 {
+//				parentSegID = v[0]
+//			}
+//
+//			if v, ok2 := md["x-amzn-tr-id"]; ok2 && len(v) > 0 {
+//				parentTraceID = v[0]
+//			}
+//		}
+//
+//		var seg *xray.XSegment
+//
+//		if util.LenTrim(parentSegID) > 0 && util.LenTrim(parentTraceID) > 0 {
+//			seg = xray.NewSegment("GrpcService-UnaryRPC-"+info.FullMethod, &xray.XRayParentSegment{
+//				SegmentID: parentSegID,
+//				TraceID:   parentTraceID,
+//			})
+//		} else {
+//			seg = xray.NewSegment("GrpcService-UnaryRPC-" + info.FullMethod)
+//		}
+//		defer seg.Close()
+//		defer func() {
+//			if err != nil {
+//				_ = seg.Seg.AddError(err)
+//			}
+//		}()
+//
+//		if md == nil {
+//			md = make(metadata.MD)
+//		}
+//
+//		md.Set("x-amzn-seg-id", seg.Seg.ID)
+//		md.Set("x-amzn-tr-id", seg.Seg.TraceID)
+//
+//		// header is sent by itself
+//		_ = grpc.SendHeader(ctx, md)
+//
+//		resp, err = handler(ctx, req)
+//		return resp, err
+//	} else {
+//		return handler(ctx, req)
+//	}
+//}
 
 // TracerStreamServerInterceptor will perform xray tracing for each stream RPC call
 //

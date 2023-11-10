@@ -3,8 +3,9 @@ module github.com/aldelo/connector
 go 1.20
 
 require (
-	github.com/aldelo/common v1.3.3
-	github.com/aws/aws-sdk-go v1.44.262
+	github.com/aldelo/common v1.3.4
+	github.com/aws/aws-sdk-go v1.45.25
+	github.com/aws/aws-xray-sdk-go v1.8.2
 	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-gonic/gin v1.9.1
 	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4
@@ -20,7 +21,6 @@ require (
 	github.com/antlr/antlr4 v0.0.0-20200820155224-be881fa6b91d // indirect
 	github.com/appleboy/gin-jwt/v2 v2.9.1 // indirect
 	github.com/aws/aws-dax-go v1.2.12 // indirect
-	github.com/aws/aws-xray-sdk-go v1.8.2 // indirect
 	github.com/boj/redistore v0.0.0-20180917114910-cd5dcc76aeff // indirect
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/cactus/go-statsd-client/statsd v0.0.0-20200728222731-a2baea3bbfc6 // indirect
@@ -91,4 +91,4 @@ require (
 )
 
 // remove the following code
-//replace github.com/aldelo/common => ../common
+replace github.com/aldelo/common => github.com/he-zhenpan/common v1.2.1-0.20231110080813-ba342b7f64cd
