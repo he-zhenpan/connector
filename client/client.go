@@ -478,6 +478,7 @@ func (c *Client) Ready() bool {
 
 // Dial will dial grpc service and establish client connection
 func (c *Client) Dial(ctx context.Context) error {
+	log.Println("start to dail ...")
 	c._remoteAddress = ""
 
 	// read client config data in
@@ -512,7 +513,7 @@ func (c *Client) Dial(ctx context.Context) error {
 		c._sqs = nil
 	}
 
-	c._z.Printf("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "after SQS Setup...")
+	log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "after SQS Setup...")
 
 	// circuit breakers prep
 	c._circuitBreakers = map[string]circuitbreaker.CircuitBreakerIFace{}
@@ -522,7 +523,7 @@ func (c *Client) Dial(ctx context.Context) error {
 		return err
 	}
 
-	c._z.Printf("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "after connectSd ...")
+	log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "after connectSd ...")
 
 	// discover service endpoints
 	if err := c.discoverEndpoints(); err != nil {
@@ -547,7 +548,7 @@ func (c *Client) Dial(ctx context.Context) error {
 		c._z.Printf("       - " + info)
 	}
 
-	c._z.Printf("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "after append endpoints ...")
+	log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "after append endpoints ...")
 
 	// setup resolver and setup load balancer
 	var target string
@@ -570,7 +571,7 @@ func (c *Client) Dial(ctx context.Context) error {
 		target = fmt.Sprintf("%s:///%s", "passthrough", endpointAddrs[0])
 		loadBalancerPolicy = ""
 	}
-	c._z.Printf("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "after WithRoundRobin ...")
+	log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "after WithRoundRobin ...")
 
 	// build dial options
 	if opts, err := c.buildDialOptions(loadBalancerPolicy); err != nil {
@@ -601,7 +602,7 @@ func (c *Client) Dial(ctx context.Context) error {
 			dialSec = 5
 		}
 
-		c._z.Printf("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "after before xray.NewSegmentNullable ...")
+		log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "after before xray.NewSegmentNullable ...")
 
 		ctxWithTimeout, cancel := context.WithTimeout(ctx, time.Duration(dialSec)*time.Second)
 		defer cancel()
@@ -612,7 +613,7 @@ func (c *Client) Dial(ctx context.Context) error {
 		}
 
 		if c._conn, err = grpc.DialContext(ctxWithTimeout, target, opts...); err != nil {
-			c._z.Printf("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "dail failed ...")
+			log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "dail failed ...")
 			c._z.Errorf("Dial Failed: (If TLS/mTLS, Check Certificate SAN) %s", err.Error())
 			e := fmt.Errorf("gRPC Client Dial Service Endpoint %s Failed: (If TLS/mTLS, Check Certificate SAN) %s", target, err.Error())
 			if seg != nil {
@@ -620,7 +621,7 @@ func (c *Client) Dial(ctx context.Context) error {
 			}
 			return e
 		} else {
-			c._z.Printf("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "before dail success ...")
+			log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "before dail success ...")
 			// dial grpc service endpoint success
 			c._z.Printf("Dial Successful")
 
@@ -642,7 +643,7 @@ func (c *Client) Dial(ctx context.Context) error {
 					return fmt.Errorf("gRPC Service Server Not Ready: " + e.Error())
 				}
 			}
-			c._z.Printf("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "after waitForEndpointReady ...")
+			log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "after waitForEndpointReady ...")
 
 			// dial successful, now start web server for notification callbacks (webhook)
 			if c.WebServerConfig != nil && util.LenTrim(c.WebServerConfig.ConfigFileName) > 0 {
