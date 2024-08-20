@@ -165,6 +165,7 @@ type serviceEndpoint struct {
 
 // NewClient creates grpc client
 func NewClient(appName string, configFileName string, customConfigPath string) *Client {
+	log.Println("NewClient invoked...")
 	return &Client{
 		AppName:          appName,
 		ConfigFileName:   configFileName,
