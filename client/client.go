@@ -181,6 +181,7 @@ func (c *Client) readConfig() error {
 		CustomConfigPath: c.CustomConfigPath,
 	}
 
+	log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "before read config ...")
 	if err := c._config.Read(); err != nil {
 		c._config = nil
 		return fmt.Errorf("Read Config Failed: %s", err.Error())
@@ -191,6 +192,7 @@ func (c *Client) readConfig() error {
 		return fmt.Errorf("Configured Instance Port Not Valid: %s", "Tcp Port Max is 65535")
 	}
 
+	log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "after read config/ before zap init ...")
 	// setup logger
 	c._z = &data.ZapLog{
 		DisableLogger:   !c._config.Target.ZapLogEnabled,
@@ -201,9 +203,11 @@ func (c *Client) readConfig() error {
 		return fmt.Errorf("Init ZapLog Failed: %s", e.Error())
 	}
 
+	log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "after zap init ...")
 	if _cache != nil {
 		_cache.DisableLogging = !c._config.Target.ZapLogEnabled
 	}
+	log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "after cache update ...")
 
 	return nil
 }
@@ -771,6 +775,7 @@ func (c *Client) DoNotifierAlertService() (err error) {
 	if c._notifierClient != nil {
 		doConnection = true
 	}
+	log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "start enter DoNotifierAlertService ...")
 
 	if doConnection || util.FileExists(path.Join(c.CustomConfigPath, c.ConfigFileName+"-notifier-client.yaml")) {
 		if !doConnection {
@@ -793,15 +798,17 @@ func (c *Client) DoNotifierAlertService() (err error) {
 
 				c._notifierClient.ServiceAlertSkippedHandler
 			*/
-
+			log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "after notifier ConfiguredForNotifierClientDial ...")
 			if !doConnection {
 				c._notifierClient.ServiceHostOnlineHandler = func(host string, port uint) {
+					log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "before notifier ServiceHostOnlineHandler ...")
 					if _cache != nil && c._config != nil {
 						if util.LenTrim(c._config.Target.ServiceName) > 0 && util.LenTrim(c._config.Target.NamespaceName) > 0 {
 							cacheExpSeconds := c._config.Target.SdEndpointCacheExpires
 							if cacheExpSeconds == 0 {
 								cacheExpSeconds = 300
 							}
+							log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "before cache AddServiceEndpoints ...")
 
 							_cache.AddServiceEndpoints(strings.ToLower(c._config.Target.ServiceName+"."+c._config.Target.NamespaceName), []*serviceEndpoint{
 								{
@@ -814,8 +821,11 @@ func (c *Client) DoNotifierAlertService() (err error) {
 									CacheExpire: time.Now().Add(time.Duration(cacheExpSeconds) * time.Second),
 								},
 							})
+							log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "before cache GetLiveServiceEndpoints ...")
 
 							c._endpoints = _cache.GetLiveServiceEndpoints(strings.ToLower(c._config.Target.ServiceName+"."+c._config.Target.NamespaceName), c._config.Target.InstanceVersion, true)
+
+							log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "before cache UpdateLoadBalanceResolver ...")
 
 							if e := c.UpdateLoadBalanceResolver(); e != nil {
 								c.ZLog().Errorf(e.Error())
@@ -825,12 +835,16 @@ func (c *Client) DoNotifierAlertService() (err error) {
 				}
 
 				c._notifierClient.ServiceHostOfflineHandler = func(host string, port uint) {
+					log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "before notifier ServiceHostOfflineHandler ...")
 					if _cache != nil && c._config != nil {
 						if util.LenTrim(c._config.Target.ServiceName) > 0 && util.LenTrim(c._config.Target.NamespaceName) > 0 {
 							_cache.PurgeServiceEndpointByHostAndPort(strings.ToLower(c._config.Target.ServiceName+"."+c._config.Target.NamespaceName), host, port)
 						}
+						log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "before cache GetLiveServiceEndpoints ...")
 
 						c._endpoints = _cache.GetLiveServiceEndpoints(strings.ToLower(c._config.Target.ServiceName+"."+c._config.Target.NamespaceName), c._config.Target.InstanceVersion, true)
+
+						log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "before cache UpdateLoadBalanceResolver ...")
 
 						if e := c.UpdateLoadBalanceResolver(); e != nil {
 							c.ZLog().Errorf(e.Error())
@@ -839,9 +853,11 @@ func (c *Client) DoNotifierAlertService() (err error) {
 				}
 
 				c._notifierClient.ServiceAlertStoppedHandler = func(reason string) {
+					log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "before notifier ServiceAlertStoppedHandler ...")
 					if strings.Contains(strings.ToLower(reason), "transport is closing") {
 						if c._notifierClient != nil && c._z != nil {
 							c._z.Warnf("!!! Notifier Client Service Disconnected - Re-Attempting Connection in 5 Seconds...!!!")
+							log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "before notifier PurgeEndpointCache ...")
 
 							c._notifierClient.PurgeEndpointCache()
 							time.Sleep(5 * time.Second)
@@ -865,6 +881,8 @@ func (c *Client) DoNotifierAlertService() (err error) {
 				return nil
 			}
 
+			log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "before notifier Dial ...")
+
 			// dial notifier client to notifier server endpoint and begin service operations
 			if err = c._notifierClient.Dial(); err != nil {
 				if c._notifierClient != nil && c._z != nil {
@@ -873,6 +891,7 @@ func (c *Client) DoNotifierAlertService() (err error) {
 				}
 				return err
 			} else {
+				log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "before notifier Subscribe ...")
 				if err = c._notifierClient.Subscribe(c._notifierClient.ConfiguredSNSDiscoveryTopicArn()); err != nil {
 					if c._notifierClient != nil && c._z != nil {
 						c._z.Errorf("!!! Notifier Client Service Subscribe Failed: " + err.Error() + " !!!")
@@ -880,6 +899,7 @@ func (c *Client) DoNotifierAlertService() (err error) {
 					}
 					return err
 				} else {
+					log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "before notifier Subscribe success ...")
 					// subscribe successful, notifier client alert services started
 					c._z.Printf("~~~ Notifier Client Service Started ~~~")
 				}
