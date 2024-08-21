@@ -21,6 +21,7 @@ import (
 	util "github.com/aldelo/common"
 	"github.com/aldelo/common/wrapper/cloudmap"
 	"github.com/aldelo/connector/adapters/registry/sdoperationstatus"
+	"log"
 	"time"
 )
 
@@ -200,8 +201,10 @@ func DiscoverInstances(sd *cloudmap.CloudMap,
 	if util.LenTrim(namespaceName) == 0 {
 		return []*InstanceInfo{}, fmt.Errorf("Namespace Name is Required")
 	}
+	log.Println("Client DiscoverInstances Entered")
 
 	if lst, e := sd.DiscoverInstances(namespaceName, serviceName, healthy, customAttributes, maxResults, timeoutDuration...); e != nil {
+		log.Println("Client DiscoverInstances Error")
 		return []*InstanceInfo{}, e
 	} else {
 		for _, v := range lst {
@@ -216,6 +219,7 @@ func DiscoverInstances(sd *cloudmap.CloudMap,
 				InstanceHealthy: *v.HealthStatus == "HEALTHY",
 			})
 		}
+		log.Println("Client DiscoverInstances Success")
 
 		return instanceList, nil
 	}

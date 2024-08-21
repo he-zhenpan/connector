@@ -20,6 +20,7 @@ import (
 	"fmt"
 	util "github.com/aldelo/common"
 	data "github.com/aldelo/common/wrapper/viper"
+	"log"
 	"os"
 	"strings"
 )
@@ -411,6 +412,8 @@ func (c *config) Read() error {
 		"grpc.circuit_breaker_error_percent_threshold", 50).Default( // causes circuits to open once the rolling measure of errors exceeds this percent of requests, default = 50
 		"grpc.circuit_breaker_logger_enabled", true) // indicates the logger that will be used to log circuit breaker action
 
+	log.Println("!!!!!! before read config init")
+
 	if ok, err := c._v.Init(); err != nil {
 		return err
 	} else {
@@ -422,6 +425,8 @@ func (c *config) Read() error {
 			//c._v.WatchConfig()
 		}
 	}
+
+	log.Println("!!!!!! before read config Unmarshal")
 
 	if err := c._v.Unmarshal(c); err != nil {
 		return err

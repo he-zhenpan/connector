@@ -104,4 +104,4 @@ require (
 )
 
 // remove the following code
-// replace github.com/aldelo/common => ../common
+replace github.com/aldelo/common v1.4.9 => github.com/he-zhenpan/common v1.2.1-0.20240821075656-5f8f4efe8e3b
