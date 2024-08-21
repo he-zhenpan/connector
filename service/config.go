@@ -651,11 +651,11 @@ func (c *config) Read() error {
 		return err
 	} else {
 		if !ok {
-			if e := c._v.Save(); e != nil {
-				return fmt.Errorf("Create Config File Failed: " + e.Error())
-			}
+			//if e := c._v.Save(); e != nil {
+			//	return fmt.Errorf("Create Config File Failed: " + e.Error())
+			//}
 		} else {
-			c._v.WatchConfig()
+			//c._v.WatchConfig()
 		}
 	}
 

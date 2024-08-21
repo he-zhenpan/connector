@@ -488,6 +488,7 @@ func (c *Client) Dial(ctx context.Context) error {
 			return err
 		}
 	}
+	log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "after readConfig ...")
 
 	if !c.ConfiguredForClientDial() {
 		c._config = nil
@@ -500,6 +501,7 @@ func (c *Client) Dial(ctx context.Context) error {
 			c._z.Errorf("!!! Load Rest Target Self-Signed CA Cert Files '" + c._config.Target.RestTargetCACertFiles + "' Failed: " + err.Error() + " !!!")
 		}
 	}
+	log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "after AppendServerCAPemFiles ...")
 
 	c._z.Printf("Client " + c._config.AppName + " Starting to Connect with " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + "...")
 
