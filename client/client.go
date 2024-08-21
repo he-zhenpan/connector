@@ -1301,6 +1301,7 @@ func (c *Client) setApiDiscoveredIpPorts(cacheExpires time.Time, serviceName str
 		}
 		return nil
 	}
+	log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + " after GetLiveServiceEndpoints ...")
 
 	//
 	// acquire api ip port from service discovery
@@ -1323,7 +1324,9 @@ func (c *Client) setApiDiscoveredIpPorts(cacheExpires time.Time, serviceName str
 		customAttr = nil
 	}
 
+	log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + " before registry.DiscoverInstances ...")
 	if instanceList, err := registry.DiscoverInstances(c._sd, serviceName, namespaceName, true, customAttr, &maxCount, timeoutDuration...); err != nil {
+		log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + " discoverInstances failed ...")
 		return fmt.Errorf("Service Discovery By API Failed: " + err.Error())
 	} else {
 		for _, v := range instanceList {
@@ -1337,8 +1340,10 @@ func (c *Client) setApiDiscoveredIpPorts(cacheExpires time.Time, serviceName str
 				CacheExpire: cacheExpires,
 			})
 		}
+		log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + " after append endpoints ...")
 
 		_cache.AddServiceEndpoints(serviceName+"."+namespaceName, c._endpoints)
+		log.Println("Client " + c._config.AppName + " - " + c._config.Target.ServiceName + "." + c._config.Target.NamespaceName + " after AddServiceEndpoints ...")
 
 		return nil
 	}
