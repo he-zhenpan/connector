@@ -23,9 +23,11 @@ import (
 	"google.golang.org/grpc/resolver/manual"
 	"log"
 	"strings"
+	"sync"
 )
 
 var schemeMap map[string]*manual.Resolver
+var schemeMapLock sync.Locker
 
 func NewManualResolver(schemeName string, serviceName string, endpointAddrs []string) error {
 	if util.LenTrim(schemeName) == 0 {
@@ -49,6 +51,9 @@ func NewManualResolver(schemeName string, serviceName string, endpointAddrs []st
 	r.InitialState(resolver.State{
 		Addresses: addrs,
 	})
+
+	schemeMapLock.Lock()
+	defer schemeMapLock.Unlock()
 
 	if schemeMap == nil {
 		schemeMap = make(map[string]*manual.Resolver)
@@ -81,6 +86,9 @@ func UpdateManualResolver(schemeName string, serviceName string, endpointAddrs [
 	if util.LenTrim(serviceName) == 0 {
 		return fmt.Errorf("ServiceName is Required")
 	}
+
+	schemeMapLock.Lock()
+	defer schemeMapLock.Unlock()
 
 	if r := schemeMap[strings.ToLower(schemeName+serviceName)]; r != nil {
 		addrs := []resolver.Address{}
