@@ -27,7 +27,7 @@ import (
 )
 
 var schemeMap map[string]*manual.Resolver
-var schemeMapLock sync.Locker
+var schemeMapLock sync.Mutex
 
 func NewManualResolver(schemeName string, serviceName string, endpointAddrs []string) error {
 	if util.LenTrim(schemeName) == 0 {
