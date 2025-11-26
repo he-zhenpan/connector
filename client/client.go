@@ -324,6 +324,7 @@ func (c *Client) buildDialOptions(loadBalancerPolicy string) (opts []grpc.DialOp
 		c._z.Printf("Setup Unary Circuit Breaker Interceptor")
 		c.UnaryClientInterceptors = append(c.UnaryClientInterceptors, c.unaryCircuitBreakerHandler)
 	}
+	c.UnaryClientInterceptors = append(c.UnaryClientInterceptors, c.ReDiscoverUnaryClientInterceptor)
 
 	if xray.XRayServiceOn() {
 		c._z.Printf("Setup Unary XRay Tracer Interceptor")
@@ -1589,6 +1590,29 @@ func (c *Client) unaryCircuitBreakerHandler(ctx context.Context, method string, 
 	} else {
 		return invoker(ctx, method, req, reply, cc, opts...)
 	}
+}
+
+func (c *Client) ReDiscoverUnaryClientInterceptor(ctx context.Context, method string, req interface{}, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+	log.Println("🚀Debug: ", "In - Re-Discover Unary Client Interceptor: "+method)
+	switch cc.GetState() {
+	case connectivity.Ready, connectivity.Idle:
+		log.Println("🚀Debug: ", "... Connection State is Ready or Idle")
+		return invoker(ctx, method, req, reply, cc, opts...)
+	case connectivity.Connecting:
+		log.Println("🚀Debug: ", "... Connection State is Connecting - Waiting 1s and Retrying")
+		time.Sleep(1 * time.Second)
+	case connectivity.Shutdown, connectivity.TransientFailure:
+		log.Println("🚀Debug: ", "... Connection State is Shutdown or TransientFailure - Discovering Endpoints and Retrying")
+		err := c.discoverEndpoints(true)
+		if err != nil {
+			log.Println("Discover Endpoints Failed: " + err.Error())
+		}
+		return invoker(ctx, method, req, reply, cc, opts...)
+	default:
+		log.Println("🚀Debug: ", "... Connection State is Unknown - Retrying")
+		return invoker(ctx, method, req, reply, cc, opts...)
+	}
+	return nil
 }
 
 func (c *Client) streamCircuitBreakerHandler(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
